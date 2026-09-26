@@ -42,8 +42,14 @@ function write(s: Session) {
     process.env.NODE_ENV === "production" ||
     Boolean(process.env.K_SERVICE || process.env.K_REVISION) ||
     Boolean(process.env.VERCEL) ||
+    Boolean(process.env.RENDER) ||
     !!hosted();
-  const sameSite = process.env.VERCEL ? "lax" : isHttps ? "none" : "lax";
+  const sameSite =
+    process.env.VERCEL || process.env.RENDER || setting("APP_ORIGIN")?.includes("onrender.com")
+      ? "lax"
+      : isHttps
+        ? "none"
+        : "lax";
   setCookie("finance_session", payload + "." + signature, {
     httpOnly: true,
     secure: isHttps,

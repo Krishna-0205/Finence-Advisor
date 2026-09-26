@@ -344,22 +344,16 @@ export async function advisor(l: Ledger, question: string, invoiceId?: string) {
       }
       if (
         typeof answer?.explanation !== "string" ||
-        !Array.isArray(answer?.citations)
+        /[0-9₹$€]/.test(answer.explanation) ||
+        !Array.isArray(answer?.citations) ||
+        answer.citations.some(
+          (id: unknown) => typeof id !== "string" || !ids.has(id),
+        )
       ) {
         throw new Error("AI evidence validation failed.");
       }
-      let sanitizedExplanation = answer.explanation;
-      if (/[0-9₹$€]/.test(sanitizedExplanation)) {
-        sanitizedExplanation = sanitizedExplanation
-          .replace(/[₹$€]\s*[0-9]+(?:,[0-9]+)*(?:\.[0-9]+)?/g, "the specified amount")
-          .replace(/\b\d{4}\b/g, "the current period")
-          .replace(/\b\d+\b/g, "multiple");
-      }
-      const validCitations = answer.citations.filter(
-        (id: unknown) => typeof id === "string" && ids.has(id),
-      );
-      explanation = sanitizedExplanation;
-      citations = validCitations.length ? validCitations : citations;
+      explanation = answer.explanation;
+      citations = answer.citations;
       mode = geminiApiKey() ? "Gemini AI explanation" : "AI explanation";
       notice =
         "Generated from verified metrics. Review the evidence before acting.";

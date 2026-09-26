@@ -77,7 +77,7 @@ test("Feature 44 - AI Governance Guardrails & NIST Compliance", () => {
   const config = getAIGovernanceConfig();
 
   // Model & Provider
-  assert.equal(config.model, "gemini-2.5-flash");
+  assert.equal(config.model, DEFAULT_GEMINI_MODEL);
   assert.equal(config.provider, "GOOGLE");
 
   // Strict architectural boundaries

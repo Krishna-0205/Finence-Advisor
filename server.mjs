@@ -9,11 +9,20 @@ import app from "./dist/server/server.js";
 const root = resolve("dist/client");
 const mime = {
   ".js": "text/javascript",
+  ".mjs": "text/javascript",
   ".css": "text/css",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
   ".csv": "text/csv",
   ".ico": "image/x-icon",
+  ".json": "application/json",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".txt": "text/plain",
 };
 const server = createServer(async (req, res) => {
   try {
@@ -26,6 +35,13 @@ const server = createServer(async (req, res) => {
       (req.headers["x-forwarded-ssl"] === "on" ? "https" : "http");
     const origin = process.env.APP_ORIGIN || `${proto}://${host}`;
     const url = new URL(req.url, origin);
+
+    // Render health check
+    if (url.pathname === "/healthz" || url.pathname === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "healthy", timestamp: new Date().toISOString() }));
+      return;
+    }
 
     if (req.headers.origin) {
       res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
@@ -88,7 +104,10 @@ const server = createServer(async (req, res) => {
     res.statusCode = response.status;
     for (const [k, v] of response.headers)
       if (k !== "set-cookie") res.setHeader(k, v);
-    const cookies = response.headers.getSetCookie();
+    const cookies =
+      typeof response.headers.getSetCookie === "function"
+        ? response.headers.getSetCookie()
+        : [];
     if (cookies.length) res.setHeader("set-cookie", cookies);
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "same-origin");

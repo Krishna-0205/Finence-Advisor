@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: finence-advisor
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: APP_ORIGIN
+        value: https://finence-advisor.onrender.com
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GEMINI_MODEL
+        value: gemini-flash-lite-latest
