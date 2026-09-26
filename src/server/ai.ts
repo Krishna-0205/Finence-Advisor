@@ -268,14 +268,17 @@ export async function advisor(l: Ledger, question: string, invoiceId?: string) {
   let explanation = "";
   let citations: string[] = [];
   let mode = "Verified explanation";
-  let notice =
-    "AI is not connected. This answer is produced directly from the financial rules.";
+  let notice = aiConfigured()
+    ? "Deterministic financial rules applied. Review the evidence before acting."
+    : "AI is not connected. This answer is produced directly from the financial rules.";
   const isActionDirective =
     /approve|reject|transfer|pay this|execute.*payment|delete|change.*budget/i.test(question);
   if (isActionDirective) {
     explanation =
       "I can explain the evidence, but financial actions need a human decision in the relevant record.";
     citations = selected ? [selected.id] : [];
+    notice =
+      "Financial action directives require human decision. Direct mutations are blocked.";
   } else if (selected) {
     explanation = risk.length
       ? risk[0].signals.map((s) => s.title + ": " + s.reason).join(" ")
@@ -327,7 +330,7 @@ export async function advisor(l: Ledger, question: string, invoiceId?: string) {
       ...projection.source_receivables,
     ].map((x) => x.id);
   }
-  if (aiConfigured() && intent !== "unknown") {
+  if (aiConfigured() && intent !== "unknown" && !isActionDirective) {
     try {
       let answer;
       if (geminiApiKey()) {
