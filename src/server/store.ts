@@ -34,9 +34,15 @@ const fields = [
   "imports",
   "alerts",
 ] as const;
+const getDataDir = () => {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return resolve("/tmp", ".data");
+  }
+  return resolve(".data");
+};
 const path = (company: string) => {
   if (!/^[a-zA-Z0-9-]+$/.test(company)) throw new Error("Invalid company.");
-  return resolve(".data", company + ".json");
+  return resolve(getDataDir(), company + ".json");
 };
 export async function load(actor: Actor): Promise<Ledger> {
   if (actor.mode === "demo") {
@@ -58,7 +64,7 @@ export async function load(actor: Actor): Promise<Ledger> {
       );
     } catch {
       const l = seed(actor.company_id);
-      await mkdir(".data", { recursive: true });
+      await mkdir(getDataDir(), { recursive: true });
       await writeFile(path(actor.company_id), JSON.stringify(l));
       return isolate(l, actor);
     }
@@ -144,7 +150,7 @@ export async function createDemo() {
       .run();
     return id;
   }
-  await mkdir(".data", { recursive: true });
+  await mkdir(getDataDir(), { recursive: true });
   await writeFile(path(id), JSON.stringify(l));
   return id;
 }

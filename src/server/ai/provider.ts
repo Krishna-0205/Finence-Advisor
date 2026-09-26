@@ -59,7 +59,7 @@ export interface AIProvider {
 /**
  * Exact Google Gemini model identifier used across the architecture
  */
-export const DEFAULT_GEMINI_MODEL = "gemini-flash-latest";
+export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 
 /**
  * Google Gemini Provider Implementation

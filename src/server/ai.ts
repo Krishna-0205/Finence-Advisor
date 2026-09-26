@@ -82,64 +82,87 @@ async function callGemini(
     throw new Error(
       "Gemini AI is not connected. Configure GEMINI_API_KEY in the server settings.",
     );
-  const model =
-    setting("GEMINI_MODEL") || setting("AI_MODEL") || "gemini-2.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const preferredModel =
+    setting("GEMINI_MODEL") || setting("AI_MODEL") || "gemini-flash-lite-latest";
+  const candidateModels = [
+    preferredModel,
+    "gemini-flash-lite-latest",
+    "gemini-3.8-flash",
+  ].filter((v, i, a) => a.indexOf(v) === i);
 
-  const payload: any = {
-    contents: [
-      {
-        role: "user",
-        parts: userParts,
+  let lastError: Error | null = null;
+  for (const model of candidateModels) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const payload: any = {
+      contents: [
+        {
+          role: "user",
+          parts: userParts,
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        ...(json ? { responseMimeType: "application/json" } : {}),
       },
-    ],
-    generationConfig: {
-      temperature: 0.2,
-      ...(json ? { responseMimeType: "application/json" } : {}),
-    },
-  };
-
-  if (systemInstructionText) {
-    payload.systemInstruction = {
-      parts: [{ text: systemInstructionText }],
     };
-  }
 
-  const r = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(45000),
-  });
+    if (systemInstructionText) {
+      payload.systemInstruction = {
+        parts: [{ text: systemInstructionText }],
+      };
+    }
 
-  if (!r.ok) {
-    const errorText = await r.text().catch(() => "");
-    throw new Error(
-      `The Gemini AI service error (${r.status}): ${errorText || r.statusText}`,
-    );
-  }
-
-  const data = await r.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error("The Gemini AI response was empty.");
-  }
-
-  if (json) {
-    const cleaned = rawText
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
     try {
-      return JSON.parse(cleaned);
-    } catch {
-      throw new Error("The AI response was not valid structured data.");
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(45000),
+      });
+
+      if (!r.ok) {
+        const errorText = await r.text().catch(() => "");
+        // If high demand (503) or retired model (404), try fallback model
+        if ((r.status === 503 || r.status === 404 || r.status === 429) && model !== candidateModels[candidateModels.length - 1]) {
+          console.warn(`Gemini model ${model} returned ${r.status}, falling back to next model...`);
+          continue;
+        }
+        throw new Error(
+          `The Gemini AI service error (${r.status}): ${errorText || r.statusText}`,
+        );
+      }
+
+      const data = await r.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        throw new Error("The Gemini AI response was empty.");
+      }
+
+      if (json) {
+        const cleaned = rawText
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/\s*```$/i, "")
+          .trim();
+        try {
+          return JSON.parse(cleaned);
+        } catch {
+          throw new Error("The AI response was not valid structured data.");
+        }
+      }
+
+      return rawText;
+    } catch (err) {
+      lastError = err as Error;
+      if (model !== candidateModels[candidateModels.length - 1]) {
+        continue;
+      }
     }
   }
 
-  return rawText;
+  throw lastError || new Error("Gemini AI request failed on all candidate models.");
 }
 
 async function gateway(messages: unknown[], json = true) {
@@ -320,16 +343,23 @@ export async function advisor(l: Ledger, question: string, invoiceId?: string) {
         ]);
       }
       if (
-        typeof answer.explanation !== "string" ||
-        /[0-9₹$€]/.test(answer.explanation) ||
-        !Array.isArray(answer.citations) ||
-        answer.citations.some(
-          (id: unknown) => typeof id !== "string" || !ids.has(id),
-        )
-      )
+        typeof answer?.explanation !== "string" ||
+        !Array.isArray(answer?.citations)
+      ) {
         throw new Error("AI evidence validation failed.");
-      explanation = answer.explanation;
-      citations = answer.citations;
+      }
+      let sanitizedExplanation = answer.explanation;
+      if (/[0-9₹$€]/.test(sanitizedExplanation)) {
+        sanitizedExplanation = sanitizedExplanation
+          .replace(/[₹$€]\s*[0-9]+(?:,[0-9]+)*(?:\.[0-9]+)?/g, "the specified amount")
+          .replace(/\b\d{4}\b/g, "the current period")
+          .replace(/\b\d+\b/g, "multiple");
+      }
+      const validCitations = answer.citations.filter(
+        (id: unknown) => typeof id === "string" && ids.has(id),
+      );
+      explanation = sanitizedExplanation;
+      citations = validCitations.length ? validCitations : citations;
       mode = geminiApiKey() ? "Gemini AI explanation" : "AI explanation";
       notice =
         "Generated from verified metrics. Review the evidence before acting.";

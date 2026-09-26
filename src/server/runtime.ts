@@ -1,4 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+try {
+  process.loadEnvFile?.(".env");
+} catch {}
 export type HostedContext = { env: Record<string, any>; user: string };
 const runtime = globalThis as typeof globalThis & {
   __financeHostedContext?: AsyncLocalStorage<HostedContext>;

@@ -8,3 +8,4 @@ qa/
 
 .wrangler/
 .sites-runtime/
+.vercel

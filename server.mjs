@@ -1,4 +1,7 @@
 /** Node HTTP adapter for the built TanStack Start server. No separate backend. */
+try {
+  process.loadEnvFile?.(".env");
+} catch {}
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";

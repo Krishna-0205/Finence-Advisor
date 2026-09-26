@@ -36,11 +36,13 @@ function write(s: Session) {
     setting("APP_ORIGIN")?.startsWith("https://") ||
     process.env.NODE_ENV === "production" ||
     Boolean(process.env.K_SERVICE || process.env.K_REVISION) ||
+    Boolean(process.env.VERCEL) ||
     !!hosted();
+  const sameSite = process.env.VERCEL ? "lax" : isHttps ? "none" : "lax";
   setCookie("finance_session", payload + "." + signature, {
     httpOnly: true,
     secure: isHttps,
-    sameSite: isHttps ? "none" : "lax",
+    sameSite,
     path: "/",
     maxAge: 3600,
   });

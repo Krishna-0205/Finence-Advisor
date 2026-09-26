@@ -25,12 +25,12 @@ const testCompany = "test-governance-co";
 
 test("Feature 44 - Provider-Configurable AI Layer & Exact Gemini Model", async () => {
   // Verify default Gemini model identifier
-  assert.equal(DEFAULT_GEMINI_MODEL, "gemini-flash-latest");
+  assert.equal(DEFAULT_GEMINI_MODEL, "gemini-flash-lite-latest");
 
   const geminiProvider = new GeminiAIProvider();
   assert.equal(geminiProvider.id, "GOOGLE");
   assert.equal(geminiProvider.name, "Google Gemini");
-  assert.equal(geminiProvider.defaultModel, "gemini-flash-latest");
+  assert.equal(geminiProvider.defaultModel, "gemini-flash-lite-latest");
 
   // Verify provider-configurability via AIProvider interface
   const mockProvider = new DeterministicMockAIProvider();
