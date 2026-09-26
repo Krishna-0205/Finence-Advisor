@@ -1,6 +1,6 @@
 import { useFinancialContextTool } from "./webmcp";
 import { useState } from "react";
-import { useLocation } from "@tanstack/react-router";
+import { useLocation, Link } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   FileText,
@@ -52,14 +52,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       <aside className={"sidebar " + (open ? "is-open" : "")}>
-        <a className="brand" href="/">
+        <Link className="brand" to="/">
           <span className="brand-mark">
             <ChartNoAxesCombined size={23} />
           </span>
           <span>
             Finance<span className="brand-sub">Advisor</span>
           </span>
-        </a>
+        </Link>
         <button className="company-switch" onClick={companyList}>
           <span className="company-avatar">{view.company.name[0]}</span>
           <span>
@@ -93,9 +93,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 view.actor.role === "admin",
             )
             .map(([href, label, Icon]) => (
-              <a
+              <Link
                 key={href}
-                href={href}
+                to={href}
                 className={
                   (href === "/" ? path === "/" : path.startsWith(href))
                     ? "active"
@@ -105,7 +105,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Icon size={19} />
                 <span>{label}</span>
                 {href === "/risk" && <b>{view.risk_count}</b>}
-              </a>
+              </Link>
             ))}
         </nav>
         <div className="sidebar-bottom">
@@ -166,9 +166,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {view.actor.mode === "demo" && (
               <span className="demo-tag">Fictional demo data</span>
             )}
-            <a href="/advisor" className="top-advisor">
+            <Link to="/advisor" className="top-advisor">
               <Sparkles size={16} /> Ask advisor <ArrowUpRight size={14} />
-            </a>
+            </Link>
           </div>
         </header>
         <main id="main-content">

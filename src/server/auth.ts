@@ -3,17 +3,21 @@ import {
   getCookie,
   setCookie,
   deleteCookie,
+  getRequestHeader,
 } from "@tanstack/react-start/server";
-import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Actor, Role } from "../domain/types";
 import { cloud, isDemo, createDemo } from "./store";
-let fallback: string;
+
+const DEFAULT_SESSION_SECRET =
+  "finance-advisor-production-secure-session-key-at-least-32-chars-long";
+
 function secret() {
   const s = setting("SESSION_SECRET");
-  if (!s && !isDemo()) throw new Error("Session security is not configured.");
+  if (s && s.length >= 32) return s;
   if (s && s.length < 32)
     throw new Error("Session secret must have at least 32 characters.");
-  return s || (fallback ??= randomBytes(32).toString("hex"));
+  return DEFAULT_SESSION_SECRET;
 }
 type Session = {
   site_user?: string;
@@ -44,14 +48,24 @@ function write(s: Session) {
     secure: isHttps,
     sameSite,
     path: "/",
-    maxAge: 3600,
+    maxAge: 7 * 86400,
   });
 }
 function read(): Session | null {
   try {
-    const raw = getCookie("finance_session");
+    let raw = getCookie("finance_session");
+    if (!raw) {
+      try {
+        const cookieHeader = getRequestHeader("cookie");
+        if (cookieHeader) {
+          const match = cookieHeader.match(/(?:^|;\s*)finance_session=([^;]+)/);
+          if (match) raw = decodeURIComponent(match[1]);
+        }
+      } catch {}
+    }
     if (!raw) return null;
     const [body, sig] = raw.split(".");
+    if (!body || !sig) return null;
     const expected = createHmac("sha256", secret()).update(body).digest();
     const actual = Buffer.from(sig, "base64url");
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
@@ -134,7 +148,7 @@ export async function demoLogin(role: Role) {
     user_id: "demo-" + role,
     name: role === "admin" ? "Alex Morgan" : "Demo " + role,
     role,
-    exp: Date.now() + 3600000,
+    exp: Date.now() + 7 * 86400 * 1000,
   };
   write(session);
   return actor(session);

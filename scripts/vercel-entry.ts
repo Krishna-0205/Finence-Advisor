@@ -46,23 +46,37 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     const headers = new Headers();
     for (const [k, v] of Object.entries(req.headers)) {
-      if (v) headers.set(k, Array.isArray(v) ? v.join(",") : v);
+      if (v) {
+        headers.set(
+          k,
+          Array.isArray(v)
+            ? k.toLowerCase() === "cookie"
+              ? v.join("; ")
+              : v.join(",")
+            : v,
+        );
+      }
     }
 
+    const hasBody =
+      !["GET", "HEAD"].includes(req.method || "GET") && chunks.length > 0;
     const request = new Request(url, {
       method: req.method,
       headers,
-      ...(!["GET", "HEAD"].includes(req.method || "GET")
-        ? { body: Buffer.concat(chunks) }
-        : {}),
+      ...(hasBody ? { body: Buffer.concat(chunks) } : {}),
     });
 
     const response = await app.fetch(request);
     res.statusCode = response.status;
     for (const [k, v] of response.headers) {
-      if (k !== "set-cookie") res.setHeader(k, v);
+      if (k.toLowerCase() !== "set-cookie") res.setHeader(k, v);
     }
-    const cookies = response.headers.getSetCookie();
+    const cookies =
+      typeof response.headers.getSetCookie === "function"
+        ? response.headers.getSetCookie()
+        : response.headers.get("set-cookie")
+          ? [response.headers.get("set-cookie")!]
+          : [];
     if (cookies.length) res.setHeader("set-cookie", cookies);
 
     res.setHeader("X-Content-Type-Options", "nosniff");

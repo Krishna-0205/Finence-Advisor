@@ -51,7 +51,7 @@ export function Title({
       <div>
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
-        {description && <p>{description}</p>}
+        {description && <p suppressHydrationWarning>{description}</p>}
       </div>
       {action}
     </div>
@@ -84,7 +84,7 @@ export function Empty({ text = "No records to show." }: { text?: string }) {
   return <div className="empty">{text}</div>;
 }
 export function Money({ value }: { value: number }) {
-  return <span className="money">{money(value)}</span>;
+  return <span className="money" suppressHydrationWarning>{money(value)}</span>;
 }
 export function Modal({
   title,
