@@ -33,7 +33,7 @@ export const Route = createRootRoute({
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <Outlet />
         <Scripts />
       </body>

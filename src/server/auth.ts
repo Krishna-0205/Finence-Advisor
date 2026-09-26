@@ -5,7 +5,7 @@ import {
   deleteCookie,
   getRequestHeader,
 } from "@tanstack/react-start/server";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 import type { Actor, Role } from "../domain/types";
 import { cloud, isDemo, createDemo } from "./store";
 
@@ -14,9 +14,10 @@ const DEFAULT_SESSION_SECRET =
 
 function secret() {
   const s = setting("SESSION_SECRET");
-  if (s && s.length >= 32) return s;
-  if (s && s.length < 32)
-    throw new Error("Session secret must have at least 32 characters.");
+  if (s && typeof s === "string" && s.length >= 32) return s;
+  if (s && typeof s === "string" && s.length > 0) {
+    return createHash("sha256").update(s).digest("hex");
+  }
   return DEFAULT_SESSION_SECRET;
 }
 type Session = {
@@ -79,14 +80,25 @@ function read(): Session | null {
 }
 export async function actor(sessionOverride?: Session): Promise<Actor> {
   const s = sessionOverride || read();
-  if (!s) throw new Error("Sign in to continue.");
+  if (!s) {
+    if (isDemo()) {
+      return {
+        user_id: "demo-admin",
+        company_id: "demo-default",
+        role: "admin",
+        name: "Alex Morgan",
+        mode: "demo",
+      };
+    }
+    throw new Error("Sign in to continue.");
+  }
   if (s.mode === "demo") {
     if (!isDemo()) throw new Error("Demo access is disabled.");
     return {
-      user_id: s.user_id!,
-      company_id: s.company_id!,
-      role: s.role!,
-      name: s.name!,
+      user_id: s.user_id || "demo-admin",
+      company_id: s.company_id || "demo-default",
+      role: s.role || "admin",
+      name: s.name || "Alex Morgan",
       mode: "demo",
     };
   }

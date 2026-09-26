@@ -21,7 +21,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       );
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type,Authorization,X-Requested-With",
+        "Content-Type,Authorization,X-Requested-With,x-tsr-serverfn,x-tsr-transport,traceparent",
       );
     }
 
@@ -77,7 +77,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         : response.headers.get("set-cookie")
           ? [response.headers.get("set-cookie")!]
           : [];
-    if (cookies.length) res.setHeader("set-cookie", cookies);
+    if (cookies.length === 1) {
+      res.setHeader("set-cookie", cookies[0]);
+    } else if (cookies.length > 1) {
+      res.setHeader("set-cookie", cookies);
+    }
 
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "same-origin");

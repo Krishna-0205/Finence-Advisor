@@ -50,6 +50,10 @@ async function call(name, data, method = "POST") {
 const login = await call("loginFn", { role: "admin" });
 assert.equal(login.result.ok, true);
 console.log("PASS demo login");
+const sp = await call("smartPrioritiesFn", {}, "GET");
+assert.equal(sp.result.ok, true);
+const wn = await call("whyNowFn", {}, "GET");
+assert.equal(wn.result.ok, true);
 const before = (await call("viewFn", {})).result.data;
 await mkdir("qa", { recursive: true });
 for (const path of [

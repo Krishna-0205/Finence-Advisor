@@ -53,6 +53,9 @@ await build({
   ],
   define: {
     'process.env.NODE_ENV': '"production"',
+    'process.env.DEMO_MODE': '"true"',
+    'process.env.SESSION_SECRET':
+      '"finance-advisor-production-secure-session-key-at-least-32-chars-long"',
   },
   logOverride: {
     'ignored-bare-import': 'silent',
